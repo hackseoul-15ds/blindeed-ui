@@ -1,29 +1,28 @@
-import { Button, Card, Progress, Radio, Space, Tag, Typography } from "antd"
+import { API_URL, USERNAME } from "@/consts"
+import { Button, Card, Progress, Tag, Typography } from "antd"
 import axios from "axios"
 import { useState } from "react"
 
 const { Title, Paragraph } = Typography
 
-const userId = 1
-
 export default function Post({
-  id,
+  _id,
   title,
   content,
-  pollOptions,
+  options,
   conditions,
-  conditionConfirmed,
+  conditionMet,
   voted,
 }) {
   const [selectedOption, setSelectedOption] = useState(null)
   const [viewResult, setViewResult] = useState(false)
 
-  const optionsTotalCount = pollOptions.reduce(
-    (prev, { count }) => prev + count,
+  const optionsTotalCount = options.reduce(
+    (prev, { voters }) => prev + voters.length,
     0
   )
 
-  const canVote = conditionConfirmed && !voted
+  const canVote = conditionMet && !voted
   const isVoting = canVote && !viewResult
 
   return (
@@ -33,38 +32,31 @@ export default function Post({
       <div className="border">
         <div className="border-b p-3">Poll</div>
         <div className="p-3">
-          <div className="mb-2">
-            {conditions.map(({ id, title, tags }) => (
-              <div className="py-1" key={id}>
-                {title}:{" "}
-                {tags.map(({ id, displayText }) => (
-                  <Tag bordered={false} color="magenta" key={id}>
-                    {displayText}
-                  </Tag>
-                ))}
-              </div>
-            ))}
-          </div>
+          {/* <div className="mb-2">
+            {conditions.map(andConditions => JSON.stringify(andConditions))}
+          </div> */}
           <div>
             <span>Voting Options:</span>
-            {pollOptions.map(({ id, title, count }) => (
+            {options.map(({ name, voters }) => (
               <div
-                key={id}
+                key={name}
                 className={`flex my-2 p-2 ${
                   isVoting && "cursor-pointer hover:bg-slate-100"
                 } ${isVoting && "border-2"} rounded ${
-                  isVoting && selectedOption === id && "border-blue-400"
+                  isVoting && selectedOption === name && "border-blue-400"
                 }`}
                 onClick={() => {
                   if (!voted) {
-                    setSelectedOption(id)
+                    setSelectedOption(name)
                   }
                 }}
               >
-                <div className="basis-24 flex-shrink-0">{title}</div>
+                <div className="basis-24 flex-shrink-0">{name}</div>
                 {(!canVote || voted || viewResult) && (
                   <Progress
-                    percent={Math.round((count / optionsTotalCount) * 100)}
+                    percent={Math.round(
+                      (voters.length / optionsTotalCount) * 100
+                    )}
                   />
                 )}
               </div>
@@ -81,10 +73,10 @@ export default function Post({
                     disabled={selectedOption == null}
                     onClick={async () => {
                       const resp = await axios.post(
-                        `http://172.18.45.169:8080/vote?userId=${userId}`,
+                        `${API_URL}/vote?username=${USERNAME}`,
                         JSON.stringify({
-                          id: 1,
-                          pollOptions: [{ id: selectedOption }],
+                          pollId: _id,
+                          option: selectedOption,
                         }),
                         {
                           headers: {
@@ -93,6 +85,7 @@ export default function Post({
                         }
                       )
                       console.log("Vote", resp)
+                      location.reload()
                     }}
                   >
                     Vote

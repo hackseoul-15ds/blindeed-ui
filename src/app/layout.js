@@ -31,14 +31,14 @@ export default function RootLayout({ children }) {
                 theme="dark"
                 items={[
                   {
-                    label: <Link href="/">Polls</Link>,
-                    key: "polls",
-                    icon: <SolutionOutlined />,
-                  },
-                  {
                     label: <Link href="/mypage">My Page</Link>,
                     key: "mypage",
                     icon: <UserOutlined />,
+                  },
+                  {
+                    label: <Link href="/">Polls</Link>,
+                    key: "polls",
+                    icon: <SolutionOutlined />,
                   },
                 ]}
               />

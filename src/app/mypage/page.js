@@ -1,19 +1,18 @@
 "use client"
 
 import TransgateConnect from "@zkpass/transgate-js-sdk"
-import { Button, Select } from "antd"
+import { Button, Select, Space } from "antd"
 import { Typography } from "antd"
-
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { API_URL, USERNAME } from "@/consts"
 
 const { Title } = Typography
 
 const APP_ID = "9cadc9d3-77c5-4c70-a32d-c419e74a8ed4"
-const userId = 1
 
-async function attest(schemaId, router) {
+async function attest(schemaId) {
   try {
     const connector = new TransgateConnect(APP_ID)
     const isAvailable = await connector.isTransgateAvailable()
@@ -23,13 +22,11 @@ async function attest(schemaId, router) {
 
     const res = await connector.launch(schemaId)
 
-    console.log(res)
     const resp = await axios.post(
-      `http://172.18.45.169:8080/verification/${userId}`,
+      `${API_URL}/verify?username=${USERNAME}`,
       JSON.stringify({ schemaId, proof: res }),
       { headers: { "Content-Type": "application/json" } }
     )
-    console.log(resp)
 
     location.reload()
   } catch (err) {
@@ -39,15 +36,14 @@ async function attest(schemaId, router) {
 }
 
 function Attestation({ tags }) {
-  const [selectedTag, setSelectedTag] = useState(tags[0]?.value)
-  const router = useRouter()
+  const [selectedTag, setSelectedTag] = useState(tags[0]?.tag)
 
   return (
     <div className="flexitems-center">
       <Select
-        defaultValue={tags[0]?.value}
-        options={tags.map(({ value, displayText }) => ({
-          value,
+        defaultValue={tags[0]?.tag}
+        options={tags.map(({ tag, displayText }) => ({
+          value: tag,
           label: displayText,
         }))}
         value={selectedTag}
@@ -58,10 +54,7 @@ function Attestation({ tags }) {
       <Button
         type="primary"
         onClick={() =>
-          attest(
-            tags.find(({ value }) => value === selectedTag).schemaId,
-            router
-          )
+          attest(tags.find(({ tag }) => tag === selectedTag).schemaId)
         }
         size="small"
       >
@@ -73,34 +66,45 @@ function Attestation({ tags }) {
 
 export default function Page() {
   const [myInfo, setMyInfo] = useState({})
-  const [conditions, setConditions] = useState([])
+  const [tags, setTags] = useState([])
 
   useEffect(() => {
     ;(async () => {
-      const resp = await axios.get(
-        `http://172.18.45.169:8080/condition?userId=${userId}`
-      )
-      const { user, conditions } = resp.data
+      const resp = await axios.get(`${API_URL}/mypage?username=${USERNAME}`)
+      const user = resp.data
 
       setMyInfo(user)
-      setConditions(conditions)
-      console.log(user, conditions)
     })()
   }, [])
 
-  const transformedConditions = conditions.map(condition => ({
-    ...condition,
-    attested: condition.tags.find(({ value }) =>
-      myInfo.tags.find(({ value: userTagValue }) => value === userTagValue)
+  useEffect(() => {
+    ;(async () => {
+      const resp = await axios.get(`${API_URL}/tags`)
+      const { tags } = resp.data
+
+      setTags(tags)
+    })()
+  }, [])
+
+  const transformedTagCategories = tags.map(({ category, tags }) => ({
+    category,
+    tags,
+    attested: tags.find(({ tag }) =>
+      myInfo.tags.find(userTag => tag === userTag)
     )?.displayText,
   }))
 
   return (
     <div>
+      <Title level={2}>My Page</Title>
+      <Space className="mb-3">
+        <Link href="/login">Login</Link>
+        <Link href="/logout">Logout</Link>
+      </Space>
       <Title level={3}>My Tags</Title>
-      {transformedConditions.map(({ title, tags, attested }) => (
-        <div className="flex items-center py-1" key={title}>
-          {title}:&nbsp; {attested || <Attestation tags={tags} />}
+      {transformedTagCategories.map(({ category, tags, attested }) => (
+        <div className="flex items-center py-1" key={category}>
+          {category}:&nbsp; {attested || <Attestation tags={tags} />}
         </div>
       ))}
     </div>
